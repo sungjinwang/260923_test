@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>강아지 런! (Puppy Run)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Pixel Art Font 추가) -->
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&family=Jua&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'DungGeunMo', monospace, sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #f6eedb;
+        }
+        /* All UI elements inherit pixel font */
+        *, button, input, h1, h2, p, span, kbd {
+            font-family: 'DungGeunMo', monospace, sans-serif !important;
+        }
+        .canvas-container {
+            position: relative;
+            box-shadow: 0 10px 25px -5px rgba(90, 50, 20, 0.2);
+            image-rendering: pixelated;
+        }
+        canvas {
+            display: block;
+            border-radius: 0.75rem;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background: #87ceeb;
+        }
+        .pixel-border {
+            border: 4px solid #5c3818;
+            box-shadow: inset -4px -4px 0px 0px #3a220e, inset 4px 4px 0px 0px #8b572a;
+        }
+        .btn-bounce {
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .btn-bounce:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col items-center justify-center p-3 sm:p-6 text-slate-800">
+
+    <!-- Main Wrapper -->
+    <div class="w-full max-w-4xl flex flex-col items-center">
+        
+        <!-- Header & High Score -->
+        <header class="w-full flex justify-between items-center mb-3 px-2">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="bg-amber-400 text-amber-900 p-2 sm:p-3 rounded-2xl shadow-sm text-xl sm:text-2xl">
+                    <i class="fa-solid fa-dog"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-amber-900 leading-none">강아지 런!</h1>
+                    <p class="text-xs sm:text-sm text-amber-700 font-medium">신나게 달리고 뼈다귀를 모아요!</p>
+                </div>
+            </div>
+
+            <!-- Score Display -->
+            <div class="flex gap-2 sm:gap-4 text-right">
+                <div class="bg-white/80 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-sm border border-amber-200">
+                    <span class="text-xs text-amber-600 font-bold block">최고 기록</span>
+                    <span id="high-score" class="text-lg sm:text-xl font-bold text-amber-900">0</span>
+                </div>
+                <div class="bg-amber-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-md border border-amber-600">
+                    <span class="text-xs text-amber-100 font-bold block">현재 점수</span>
+                    <span id="current-score" class="text-lg sm:text-xl font-bold">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Game Screen Box -->
+        <div class="canvas-container w-full aspect-[16/9] sm:aspect-[2/1] max-h-[500px] rounded-2xl overflow-hidden bg-slate-900 border-4 border-amber-300 relative">
+            <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+            <!-- Start Overlay -->
+            <div id="start-screen" class="absolute inset-0 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center text-white p-4">
+                <div class="bg-white text-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl text-center max-w-sm w-full transform border-4 border-amber-400">
+                    <div class="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner">
+                        🐕🔥
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold mb-2 text-amber-900">게임 시작하기</h2>
+                    <p class="text-xs sm:text-sm text-slate-600 mb-6 leading-relaxed">
+                        점프/2단점프 & 숙이기!<br>
+                        <span class="text-orange-600 font-bold">F키 / Shift / 터치</span>로 불을 뿜어<br>장애물을 파괴하세요!
+                    </p>
+                    
+                    <button id="start-btn" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xl rounded-2xl shadow-lg hover:shadow-xl btn-bounce transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i> 게임 시작
+                    </button>
+                </div>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="gameover-screen" class="hidden absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4">
+                <div class="bg-white text-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl text-center max-w-sm w-full border-4 border-rose-400 animate-bounce-short">
+                    <div class="w-20 h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-3 text-4xl">
+                        😿
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-rose-600 mb-1">아쉬워요!</h2>
+                    <p id="gameover-reason" class="text-sm text-slate-500 mb-4">장애물에 걸렸어요!</p>
+                    
+                    <div class="bg-slate-50 p-4 rounded-xl mb-5 space-y-1">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-500">획득 뼈다귀</span>
+                            <span id="bone-count-final" class="font-bold text-amber-600">🦴 0</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-500">최종 점수</span>
+                            <span id="final-score" class="font-bold text-slate-800">0</span>
+                        </div>
+                    </div>
+
+                    <button id="restart-btn" class="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xl rounded-2xl shadow-lg btn-bounce transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> 다시 도전하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile On-Screen Controls -->
+        <div class="w-full grid grid-cols-3 gap-2 sm:gap-3 mt-3 sm:hidden">
+            <button id="mobile-duck-btn" class="py-3.5 bg-slate-700 active:bg-slate-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md flex items-center justify-center gap-1 active:scale-95 transition">
+                <i class="fa-solid fa-arrow-down"></i> 숙이기
+            </button>
+            <button id="mobile-fire-btn" class="py-3.5 bg-orange-600 active:bg-orange-700 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md flex items-center justify-center gap-1 active:scale-95 transition border-2 border-amber-300">
+                <i class="fa-solid fa-fire"></i> 불뿜기!
+            </button>
+            <button id="mobile-jump-btn" class="py-3.5 bg-amber-500 active:bg-amber-600 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md flex items-center justify-center gap-1 active:scale-95 transition">
+                <i class="fa-solid fa-arrow-up"></i> 점프
+            </button>
+        </div>
+
+        <!-- Desktop Controls Guide -->
+        <div class="hidden sm:flex justify-center items-center gap-5 mt-4 text-amber-900 text-xs sm:text-sm font-semibold bg-amber-100/90 py-2.5 px-6 rounded-2xl border-2 border-amber-300 shadow-sm flex-wrap">
+            <div class="flex items-center gap-1.5">
+                <kbd class="px-2 py-1 bg-white rounded-lg shadow-xs text-xs font-mono border">Space</kbd> / 
+                <kbd class="px-2 py-1 bg-white rounded-lg shadow-xs text-xs font-mono border">↑</kbd> 점프 (2단)
+            </div>
+            <div class="flex items-center gap-1.5">
+                <kbd class="px-2 py-1 bg-white rounded-lg shadow-xs text-xs font-mono border">↓</kbd> 숙이기
+            </div>
+            <div class="flex items-center gap-1.5 text-orange-700 font-extrabold">
+                <kbd class="px-2 py-1 bg-orange-500 text-white rounded-lg shadow-xs text-xs font-mono border border-orange-600">F</kbd> / 
+                <kbd class="px-2 py-1 bg-orange-500 text-white rounded-lg shadow-xs text-xs font-mono border border-orange-600">Shift</kbd> 🔥 불뿜기!
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span>🦴 뼈다귀 +50점</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Web Audio Synthesizer for sound effects
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playJump() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square'; // Pixel synth sound
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(360, this.ctx.currentTime + 0.12);
+                
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+
+            playDoubleJump() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(360, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(620, this.ctx.currentTime + 0.15);
+
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playBone() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5
+                osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.08); // G5
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playFire() {
+                if (!this.ctx) return;
+                // Fire breath sound synthesis (pitch sweep + noise burst)
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.22);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.22);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.22);
+            }
+
+            playExplosion() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.18);
+
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.18);
+            }
+
+            playGameOver() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(60, this.ctx.currentTime + 0.35);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.35);
+            }
+        }
+
+        const sound = new SoundFX();
+
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game State Variables (Base Speed reduced further: 2.8)
+        let isRunning = false;
+        let isGameOver = false;
+        let score = 0;
+        let bonesCollected = 0;
+        let gameSpeed = 2.8; // Decreased speed for comfortable gameplay
+        let frameCount = 0;
+        let animationId = null;
+
+        // Ground parameters
+        const getGroundY = () => canvas.height - 48;
+
+        // Stardew Valley Style Pixel Dog Character
+        const dog = {
+            x: 60,
+            y: 0,
+            width: 48,
+            height: 44,
+            velocityY: 0,
+            gravity: 0.55,
+            jumpPower: -11.5,
+            isJumping: false,
+            isDucking: false,
+            jumpCount: 0,
+            maxJumps: 2,
+            legPhase: 0,
+            fireCooldown: 0,
+            isBreathingFire: 0, // Frame counter for mouth animation
+            
+            reset() {
+                this.y = getGroundY() - this.height;
+                this.velocityY = 0;
+                this.isJumping = false;
+                this.isDucking = false;
+                this.jumpCount = 0;
+                this.height = 44;
+                this.width = 48;
+                this.fireCooldown = 0;
+                this.isBreathingFire = 0;
+            },
+
+            jump() {
+                if (this.jumpCount < this.maxJumps) {
+                    this.velocityY = this.jumpPower;
+                    this.isJumping = true;
+                    this.jumpCount++;
+                    
+                    if (this.jumpCount === 1) {
+                        sound.playJump();
+                        createParticles(this.x + 15, this.y + this.height, '#e2e8f0', 6);
+                    } else {
+                        sound.playDoubleJump();
+                        createParticles(this.x + 15, this.y + this.height, '#facc15', 12);
+                    }
+                }
+            },
+
+            duck(ducking) {
+                if (this.isJumping) return;
+                if (ducking && !this.isDucking) {
+                    this.isDucking = true;
+                    this.height = 26;
+                    this.y = getGroundY() - this.height;
+                } else if (!ducking && this.isDucking) {
+                    this.isDucking = false;
+                    this.height = 44;
+                    this.y = getGroundY() - this.height;
+                }
+            },
+
+            shootFire() {
+                if (this.fireCooldown <= 0) {
+                    this.fireCooldown = 18; // Short cooldown (~0.3s)
+                    this.isBreathingFire = 10; // Mouth open frames
+                    sound.playFire();
+
+                    // Spawn fireball
+                    const fireY = this.isDucking ? this.y + 6 : this.y + 12;
+                    fireballs.push({
+                        x: this.x + this.width,
+                        y: fireY,
+                        width: 28,
+                        height: 20,
+                        vx: gameSpeed + 7.5,
+                        frame: 0
+                    });
+
+                    // Recoil fire spark particles
+                    createFireParticles(this.x + this.width, fireY + 8, 6);
+                }
+            },
+
+            update() {
+                if (this.fireCooldown > 0) this.fireCooldown--;
+                if (this.isBreathingFire > 0) this.isBreathingFire--;
+
+                // Gravity & Jump Physics
+                if (this.isJumping) {
+                    this.velocityY += this.gravity;
+                    this.y += this.velocityY;
+
+                    const groundY = getGroundY() - this.height;
+                    if (this.y >= groundY) {
+                        this.y = groundY;
+                        this.velocityY = 0;
+                        this.isJumping = false;
+                        this.jumpCount = 0;
+                    }
+                }
+
+                this.legPhase += gameSpeed * 0.12;
+            },
+
+            draw() {
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+
+                const pSize = 4;
+
+                const pRect = (px, py, pw, ph, color) => {
+                    ctx.fillStyle = color;
+                    ctx.fillRect(px * pSize, py * pSize, pw * pSize, ph * pSize);
+                };
+
+                const cMain = '#d97706';
+                const cDark = '#b45309';
+                const cLight = '#fef3c7';
+                const cEar = '#92400e';
+                const cNose = '#1e293b';
+                const cRed = '#ef4444';
+                const cFireOrange = '#f97316';
+
+                if (this.isDucking) {
+                    pRect(1, 2, 11, 4, cMain);
+                    pRect(2, 5, 9, 1, cMain);
+                    pRect(3, 4, 7, 2, cLight);
+                    pRect(10, 1, 3, 4, cMain);
+                    pRect(11, 0, 2, 1, cEar);
+                    pRect(12, 3, 2, 1, cLight);
+                    pRect(13, 2, 1, 1, cNose);
+                    pRect(11, 2, 1, 1, cNose);
+
+                    // Fire mouth effect when ducking
+                    if (this.isBreathingFire > 0) {
+                        pRect(13, 3, 2, 2, cFireOrange);
+                    }
+
+                    const tailOffset = Math.floor(Math.sin(frameCount * 0.3) * 1);
+                    pRect(0, 1 + tailOffset, 2, 2, cDark);
+
+                    const legAnim = Math.sin(this.legPhase) > 0 ? 1 : 0;
+                    pRect(3 + legAnim, 6, 2, 1, cDark);
+                    pRect(9 - legAnim, 6, 2, 1, cDark);
+
+                } else {
+                    const tailWag = Math.floor(Math.sin(frameCount * 0.25) * 1.5);
+                    pRect(0, 3 + tailWag, 2, 2, cDark);
+                    pRect(-1, 2 + tailWag, 2, 2, cMain);
+
+                    pRect(2, 4, 8, 5, cMain);
+                    pRect(3, 5, 6, 3, cLight);
+
+                    pRect(8, 4, 2, 2, cRed);
+
+                    pRect(7, 0, 5, 5, cMain);
+                    const earShake = this.jumpCount > 0 ? -1 : (Math.sin(this.legPhase) > 0 ? 0 : 1);
+                    pRect(6, 0 + earShake, 2, 2, cEar);
+                    pRect(8, -1 + earShake, 2, 2, cEar);
+
+                    pRect(10, 2, 3, 2, cLight);
+                    pRect(12, 2, 1, 1, cNose);
+                    pRect(9, 2, 1, 1, cNose);
+
+                    // Fire mouth glow animation
+                    if (this.isBreathingFire > 0) {
+                        pRect(11, 3, 3, 2, cFireOrange);
+                        pRect(13, 2, 2, 3, '#ef4444');
+                    }
+
+                    if (this.isJumping) {
+                        if (this.jumpCount === 2) {
+                            pRect(1, 8, 2, 2, cDark);
+                            pRect(9, 8, 2, 2, cDark);
+                        } else {
+                            pRect(2, 9, 2, 2, cDark);
+                            pRect(8, 9, 2, 2, cDark);
+                        }
+                    } else {
+                        const legStep = Math.sin(this.legPhase) > 0;
+                        if (legStep) {
+                            pRect(3, 9, 2, 2, cDark);
+                            pRect(8, 8, 2, 3, cDark);
+                        } else {
+                            pRect(3, 8, 2, 3, cDark);
+                            pRect(8, 9, 2, 2, cDark);
+                        }
+                    }
+                }
+
+                ctx.restore();
+            }
+        };
+
+        let obstacles = [];
+        let collectibles = [];
+        let fireballs = [];
+        let particles = [];
+        let backgroundClouds = [];
+
+        // Fire particle creation helper
+        function createFireParticles(x, y, count = 10) {
+            const colors = ['#ef4444', '#f97316', '#facc15', '#ffffff'];
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.3) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    size: Math.floor(Math.random() * 4 + 3),
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1
+                });
+            }
+        }
+
+        // Draw animated pixel fireball
+        function drawFireball(fb) {
+            ctx.save();
+            ctx.translate(Math.floor(fb.x), Math.floor(fb.y));
+
+            const p = 3;
+            const pR = (x, y, w, h, col) => {
+                ctx.fillStyle = col;
+                ctx.fillRect(x * p, y * p, w * p, h * p);
+            };
+
+            const toggle = Math.floor(frameCount / 3) % 2 === 0;
+
+            // Fireball Core & Flame Trail
+            pR(2, 1, 6, 4, '#ef4444');
+            pR(4, 2, 4, 2, '#f97316');
+            pR(6, 2, 2, 2, '#facc15');
+            pR(7, 2, 1, 1, '#ffffff');
+
+            // Tail flicker
+            if (toggle) {
+                pR(0, 0, 3, 2, '#f97316');
+                pR(1, 4, 3, 2, '#ef4444');
+            } else {
+                pR(0, 3, 3, 2, '#f97316');
+                pR(1, 0, 3, 2, '#ef4444');
+            }
+
+            ctx.restore();
+        }
+
+        function spawnObstacle() {
+            const types = ['hydrant', 'cat', 'bird'];
+            const randType = types[Math.floor(Math.random() * types.length)];
+
+            if (randType === 'bird') {
+                obstacles.push({
+                    type: 'bird',
+                    x: canvas.width + 50,
+                    y: getGroundY() - 62,
+                    width: 32,
+                    height: 24,
+                    wingPhase: 0
+                });
+            } else if (randType === 'cat') {
+                obstacles.push({
+                    type: 'cat',
+                    x: canvas.width + 50,
+                    y: getGroundY() - 36,
+                    width: 32,
+                    height: 36
+                });
+            } else {
+                // Hydrant
+                obstacles.push({
+                    type: 'hydrant',
+                    x: canvas.width + 50,
+                    y: getGroundY() - 38,
+                    width: 28,
+                    height: 38
+                });
+            }
+        }
+
+        function spawnCollectible() {
+            const isHigh = Math.random() > 0.45;
+            collectibles.push({
+                x: canvas.width + 50,
+                y: isHigh ? getGroundY() - 78 : getGroundY() - 34,
+                width: 28,
+                height: 20
+            });
+        }
+
+        // Particle System
+        function createParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
+                    size: Math.floor(Math.random() * 4 + 3),
+                    color,
+                    alpha: 1
+                });
+            }
+        }
+
+        // Environment & Draw Functions
+        function initClouds() {
+            backgroundClouds = [];
+            for (let i = 0; i < 4; i++) {
+                backgroundClouds.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * (canvas.height * 0.3) + 15,
+                    width: 40 + Math.random() * 30,
+                    speed: Math.random() * 0.4 + 0.2
+                });
+            }
+        }
+
+        function drawEnvironment() {
+            const groundY = getGroundY();
+
+            // Sky Gradient (Warm Stardew Valley Afternoon Sky)
+            ctx.fillStyle = '#7dd3fc';
+            ctx.fillRect(0, 0, canvas.width, groundY);
+
+            // Pixel Sun
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(canvas.width - 80, 20, 28, 28);
+            ctx.fillStyle = '#fde047';
+            ctx.fillRect(canvas.width - 76, 24, 20, 20);
+
+            // Pixel Clouds
+            ctx.fillStyle = '#ffffff';
+            backgroundClouds.forEach(cloud => {
+                const cx = Math.floor(cloud.x);
+                const cy = Math.floor(cloud.y);
+                ctx.fillRect(cx, cy, cloud.width, 14);
+                ctx.fillRect(cx + 6, cy - 6, cloud.width - 12, 6);
+                ctx.fillRect(cx + 10, cy + 14, cloud.width - 20, 4);
+
+                if (isRunning) {
+                    cloud.x -= cloud.speed;
+                    if (cloud.x < -100) cloud.x = canvas.width + 40;
+                }
+            });
+
+            // Distant Pixel Mountains & Trees
+            ctx.fillStyle = '#86efac';
+            for (let x = 0; x < canvas.width + 60; x += 60) {
+                ctx.fillRect(x, groundY - 45, 40, 45);
+                ctx.fillRect(x + 8, groundY - 65, 24, 20);
+            }
+            ctx.fillStyle = '#4ade80';
+            for (let x = 20; x < canvas.width + 60; x += 70) {
+                ctx.fillRect(x, groundY - 35, 30, 35);
+                ctx.fillRect(x + 6, groundY - 50, 18, 15);
+            }
+
+            // Stardew Valley Wooden Fence Lines
+            ctx.fillStyle = '#b45309';
+            const fenceOffset = Math.floor((frameCount * gameSpeed) % 40);
+            for (let x = -fenceOffset; x < canvas.width + 40; x += 40) {
+                // Post
+                ctx.fillRect(x, groundY - 20, 6, 20);
+                // Rails
+                ctx.fillRect(x, groundY - 16, 40, 4);
+                ctx.fillRect(x, groundY - 8, 40, 4);
+            }
+
+            // Ground Grass (Rich Farm Green)
+            ctx.fillStyle = '#65a30d';
+            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+
+            // Dirt Track Layer
+            ctx.fillStyle = '#a16207';
+            ctx.fillRect(0, groundY + 10, canvas.width, canvas.height - groundY - 10);
+
+            // Ground Top Border Line (Pixel Grass Blade Edge)
+            ctx.fillStyle = '#4d7c0f';
+            ctx.fillRect(0, groundY, canvas.width, 4);
+
+            // Animated Dirt/Grass Pixels Scrolling
+            ctx.fillStyle = '#84cc16';
+            const offset = Math.floor((frameCount * gameSpeed) % 32);
+            for (let x = -offset; x < canvas.width + 32; x += 32) {
+                ctx.fillRect(x, groundY + 2, 8, 3);
+                ctx.fillRect(x + 16, groundY + 6, 6, 2);
+                ctx.fillStyle = '#ca8a04';
+                ctx.fillRect(x + 8, groundY + 20, 10, 4);
+                ctx.fillStyle = '#84cc16';
+            }
+        }
+
+        function drawObstacle(obs) {
+            ctx.save();
+            ctx.translate(Math.floor(obs.x), Math.floor(obs.y));
+
+            const p = 3.5; // Pixel scale
+            const pR = (x, y, w, h, col) => {
+                ctx.fillStyle = col;
+                ctx.fillRect(x * p, y * p, w * p, h * p);
+            };
+
+            if (obs.type === 'hydrant') {
+                // Red Pixel Hydrant
+                pR(2, 1, 4, 9, '#ef4444');
+                pR(1, 2, 6, 7, '#dc2626');
+                pR(2, 0, 4, 2, '#f87171');
+                // Valves
+                pR(0, 4, 2, 3, '#f59e0b');
+                pR(6, 4, 2, 3, '#f59e0b');
+                pR(2, 9, 4, 2, '#991b1b');
+
+            } else if (obs.type === 'cat') {
+                // Stardew Style Pixel Cat
+                const tailWiggle = Math.floor(Math.sin(frameCount * 0.2) * 1);
+                // Tail
+                pR(8, 2 + tailWiggle, 2, 6, '#334155');
+                // Body
+                pR(2, 4, 6, 5, '#475569');
+                // Head
+                pR(1, 1, 5, 4, '#334155');
+                // Ears
+                pR(1, 0, 1, 1, '#1e293b');
+                pR(5, 0, 1, 1, '#1e293b');
+                // Glowing Eyes
+                pR(2, 2, 1, 1, '#facc15');
+                pR(4, 2, 1, 1, '#facc15');
+                // Paws
+                pR(2, 9, 2, 1, '#1e293b');
+                pR(6, 9, 2, 1, '#1e293b');
+
+            } else if (obs.type === 'bird') {
+                // Pixel Crow / Bluebird
+                obs.wingPhase += 0.2;
+                const wingUp = Math.sin(obs.wingPhase) > 0;
+
+                // Body
+                pR(2, 2, 5, 3, '#2563eb');
+                // Head
+                pR(6, 1, 3, 3, '#1d4ed8');
+                // Beak
+                pR(9, 2, 2, 1, '#f97316');
+                // Eye
+                pR(7, 1, 1, 1, '#ffffff');
+
+                // Flapping Pixel Wings
+                if (wingUp) {
+                    pR(3, -1, 3, 3, '#1e40af');
+                } else {
+                    pR(3, 4, 3, 3, '#1e40af');
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function drawCollectible(item) {
+            ctx.save();
+            ctx.translate(Math.floor(item.x), Math.floor(item.y));
+            
+            const floatY = Math.floor(Math.sin(frameCount * 0.12) * 3);
+            ctx.translate(0, floatY);
+
+            const p = 3;
+            const pR = (x, y, w, h, col) => {
+                ctx.fillStyle = col;
+                ctx.fillRect(x * p, y * p, w * p, h * p);
+            };
+
+            // White & Gold Pixel Bone 🦴
+            const cBone = '#f8fafc';
+            const cShadow = '#cbd5e1';
+
+            pR(2, 2, 5, 2, cBone);
+            pR(1, 1, 2, 2, cBone);
+            pR(1, 3, 2, 2, cBone);
+            pR(6, 1, 2, 2, cBone);
+            pR(6, 3, 2, 2, cBone);
+
+            pR(2, 4, 5, 1, cShadow);
+
+            ctx.restore();
+        }
+
+        // Precise Collision Detection
+        function checkCollision(rect1, rect2) {
+            const padding = 6;
+            return (
+                rect1.x + padding < rect2.x + rect2.width &&
+                rect1.x + rect1.width - padding > rect2.x &&
+                rect1.y + padding < rect2.y + rect2.height &&
+                rect1.y + rect1.height - padding > rect2.y
+            );
+        }
+
+        // Game Loop Update (Paced for 0.7x reduced initial speed)
+        function update() {
+            if (!isRunning) return;
+
+            frameCount++;
+            score += 0.08;
+            // Paced game speed curve starting from 2.8
+            gameSpeed = 2.8 + Math.floor(score / 250) * 0.4;
+
+            document.getElementById('current-score').textContent = Math.floor(score);
+
+            // Update Dog Player
+            dog.update();
+
+            // Update Fireballs
+            for (let i = fireballs.length - 1; i >= 0; i--) {
+                const fb = fireballs[i];
+                fb.x += fb.vx;
+
+                // Fireball trailing particles
+                if (frameCount % 2 === 0) {
+                    createFireParticles(fb.x, fb.y + 6, 1);
+                }
+
+                // Fireball hit obstacle check
+                for (let j = obstacles.length - 1; j >= 0; j--) {
+                    const obs = obstacles[j];
+                    if (checkCollision(fb, obs)) {
+                        // Explosion & Destruction!
+                        sound.playExplosion();
+                        createFireParticles(obs.x + obs.width / 2, obs.y + obs.height / 2, 22);
+                        score += 30; // Bonus points for destroying obstacles
+
+                        obstacles.splice(j, 1);
+                        fireballs.splice(i, 1);
+                        break;
+                    }
+                }
+
+                // Remove off-screen fireball
+                if (fb.x > canvas.width + 50) {
+                    fireballs.splice(i, 1);
+                }
+            }
+
+            // Spawn Obstacles
+            if (frameCount % Math.max(65, Math.floor(160 - gameSpeed * 6)) === 0) {
+                if (Math.random() < 0.75) {
+                    spawnObstacle();
+                }
+            }
+
+            // Spawn Collectibles (Bones)
+            if (frameCount % 190 === 0 && Math.random() < 0.65) {
+                spawnCollectible();
+            }
+
+            // Update & Check Obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= gameSpeed;
+
+                if (checkCollision(dog, obs)) {
+                    triggerGameOver(obs.type === 'bird' ? '새와 부딪혔어요!' : '장애물에 걸렸어요!');
+                    return;
+                }
+
+                if (obs.x + obs.width < -30) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // Update & Check Collectibles
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                const item = collectibles[i];
+                item.x -= gameSpeed;
+
+                if (checkCollision(dog, item)) {
+                    bonesCollected++;
+                    score += 50;
+                    sound.playBone();
+                    createParticles(item.x, item.y, '#facc15', 10);
+                    collectibles.splice(i, 1);
+                    continue;
+                }
+
+                if (item.x + item.width < -30) {
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            // Update Pixel Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.05;
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        // Render Frame
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawEnvironment();
+
+            // Draw Fireballs
+            fireballs.forEach(drawFireball);
+
+            // Draw Obstacles
+            obstacles.forEach(drawObstacle);
+
+            // Draw Collectibles
+            collectibles.forEach(drawCollectible);
+
+            // Draw Dog Player
+            dog.draw();
+
+            // Draw Pixel Particles
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.alpha);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
+                ctx.restore();
+            });
+        }
+
+        // Game Loop & Control Handlers
+        function gameLoop() {
+            if (!isRunning) return;
+            update();
+            draw();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function triggerGameOver(reason) {
+            isRunning = false;
+            isGameOver = true;
+            sound.playGameOver();
+
+            const highScore = parseInt(localStorage.getItem('puppy_run_highscore') || '0', 10);
+            const finalScore = Math.floor(score);
+            if (finalScore > highScore) {
+                localStorage.setItem('puppy_run_highscore', finalScore);
+                document.getElementById('high-score').textContent = finalScore;
+            } else {
+                document.getElementById('high-score').textContent = highScore;
+            }
+
+            document.getElementById('bone-count-final').textContent = `🦴 ${bonesCollected}`;
+            document.getElementById('final-score').textContent = finalScore;
+            document.getElementById('gameover-reason').textContent = reason;
+            document.getElementById('gameover-screen').classList.remove('hidden');
+        }
+
+        function startGame() {
+            sound.init();
+            score = 0;
+            bonesCollected = 0;
+            gameSpeed = 2.8; // Decreased base speed (2.8)
+            frameCount = 0;
+            obstacles = [];
+            collectibles = [];
+            fireballs = [];
+            particles = [];
+
+            dog.reset();
+            initClouds();
+
+            isRunning = true;
+            isGameOver = false;
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.add('hidden');
+
+            if (animationId) cancelAnimationFrame(animationId);
+            gameLoop();
+        }
+
+        // Event Listeners (Keyboard + Touch)
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (!isRunning && !isGameOver) {
+                    startGame();
+                } else if (isRunning) {
+                    dog.jump();
+                }
+            } else if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                if (isRunning) dog.duck(true);
+            } else if (e.code === 'KeyF' || e.code === 'KeyX' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                e.preventDefault();
+                if (isRunning) dog.shootFire();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                if (isRunning) dog.duck(false);
+            }
+        });
+
+        // Touch Controls & Button Events
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+
+        // Mobile On-Screen Buttons
+        const mobileJumpBtn = document.getElementById('mobile-jump-btn');
+        const mobileDuckBtn = document.getElementById('mobile-duck-btn');
+        const mobileFireBtn = document.getElementById('mobile-fire-btn');
+
+        mobileJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (isRunning) dog.jump();
+        });
+
+        mobileDuckBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (isRunning) dog.duck(true);
+        });
+
+        mobileDuckBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (isRunning) dog.duck(false);
+        });
+
+        mobileFireBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (isRunning) dog.shootFire();
+        });
+
+        // Canvas Direct Click/Tap to Jump
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.target !== mobileDuckBtn && e.target !== mobileFireBtn && e.target !== mobileJumpBtn) {
+                if (isRunning) dog.jump();
+            }
+        }, { passive: true });
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            if (container) {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Initial Setup
+        const savedHighScore = localStorage.getItem('puppy_run_highscore') || 0;
+        document.getElementById('high-score').textContent = savedHighScore;
+
+        resizeCanvas();
+        dog.reset();
+        initClouds();
+        draw();
+    </script>
+</body>
+</html>
